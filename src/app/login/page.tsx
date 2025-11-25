@@ -7,8 +7,17 @@ export default function LoginPage() {
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [step, setStep] = useState<"email" | "password">("email");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  const handleEmailNext = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (email) {
+      setPassword("password123");
+      setStep("password");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,76 +36,179 @@ export default function LoginPage() {
   const quickLogin = (userEmail: string) => {
     setEmail(userEmail);
     setPassword("password123");
+    setStep("password");
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow-md">
-        <div>
-          <h2 className="text-center text-3xl font-bold text-gray-900">
-            DocuSign MVP
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Sign in to your account
-          </p>
+    <div className="min-h-screen flex flex-col bg-[#f5f5f5]">
+      <header className="px-8 py-6">
+        <div className="flex items-center space-x-2">
+          <div className="w-7 h-7 bg-gradient-to-br from-[#6B4DE8] to-[#4B8DF8] rounded flex items-center justify-center">
+            <svg
+              className="w-4 h-4 text-white"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
+            </svg>
+          </div>
+          <span className="text-[19px] font-normal text-[#2c2c2c] tracking-tight">
+            docusign
+          </span>
         </div>
+      </header>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+      <main className="flex-1 flex items-center justify-center px-4 pb-24">
+        <div className="w-full max-w-[552px] bg-white rounded-lg shadow-[0_1px_3px_rgba(0,0,0,0.1)] px-12 py-10">
+          <div className="mb-8">
+            <h1 className="text-[28px] font-normal text-[#2c2c2c] mb-3 leading-tight">
+              Log in to Docusign
+            </h1>
+            <p className="text-[15px] text-[#595959] font-normal leading-snug">
+              {step === "email"
+                ? "Enter your email to log in."
+                : "Enter your password."}
+            </p>
+          </div>
+
           {error && (
-            <div className="rounded-md bg-red-50 p-4">
+            <div className="mb-6 rounded-md bg-red-50 p-4">
               <p className="text-sm text-red-800">{error}</p>
             </div>
           )}
 
-          <div className="space-y-4">
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Email address
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="you@example.com"
-              />
-            </div>
+          {step === "email" ? (
+            <form onSubmit={handleEmailNext} className="space-y-6">
+              <div>
+                <label
+                  htmlFor="email"
+                  className="block text-[13px] font-medium text-[#2c2c2c] mb-2"
+                >
+                  Email <span className="text-red-600">*</span>
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full h-[52px] px-4 text-[15px] border-2 border-[#6B4DE8] rounded-[4px] text-[#2c2c2c] placeholder-[#999] focus:outline-none focus:border-[#6B4DE8] focus:ring-0 transition-colors"
+                  placeholder="Enter email"
+                  style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}
+                />
+              </div>
 
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700"
+              <button
+                type="submit"
+                className="w-full h-[52px] bg-[#1a0d4d] text-white text-[15px] font-semibold tracking-wider rounded-[4px] hover:bg-[#150a3d] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1a0d4d] transition-colors"
               >
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="••••••••"
-              />
+                NEXT
+              </button>
+
+              <button
+                type="button"
+                className="w-full h-[52px] bg-[#f0f0f0] text-[#2c2c2c] text-[15px] font-medium rounded-[4px] hover:bg-[#e5e5e5] focus:outline-none transition-colors"
+              >
+                Sign Up for Free
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <label
+                  htmlFor="password"
+                  className="block text-[13px] font-medium text-[#2c2c2c] mb-2"
+                >
+                  Password <span className="text-red-600">*</span>
+                </label>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full h-[52px] px-4 text-[15px] border-2 border-[#6B4DE8] rounded-[4px] text-[#2c2c2c] placeholder-[#999] focus:outline-none focus:border-[#6B4DE8] focus:ring-0 transition-colors"
+                  placeholder="Enter password"
+                  autoFocus
+                  style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between text-[14px]">
+                <button
+                  type="button"
+                  onClick={() => setStep("email")}
+                  className="text-[#6B4DE8] hover:text-[#5839d1] font-medium"
+                >
+                  ← Back
+                </button>
+                <button
+                  type="button"
+                  className="text-[#6B4DE8] hover:text-[#5839d1]"
+                >
+                  Forgot password?
+                </button>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full h-[52px] bg-[#1a0d4d] text-white text-[15px] font-semibold tracking-wider rounded-[4px] hover:bg-[#150a3d] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1a0d4d] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isLoading ? "SIGNING IN..." : "SIGN IN"}
+              </button>
+            </form>
+          )}
+        </div>
+      </main>
+
+      <footer className="bg-white border-t border-[#e0e0e0] py-4 px-6">
+        <div className="max-w-[1400px] mx-auto flex items-center justify-between text-[11px] text-[#666666]">
+          <div className="flex items-center space-x-1.5">
+            <span>Powered by</span>
+            <div className="flex items-center space-x-1">
+              <div className="w-3 h-3 bg-gradient-to-br from-[#6B4DE8] to-[#4B8DF8] rounded-[2px]"></div>
+              <span className="font-medium text-[#2c2c2c]">docusign</span>
             </div>
           </div>
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isLoading ? "Signing in..." : "Sign in"}
-          </button>
-        </form>
-      </div>
+          <div className="hidden xl:flex items-center space-x-5">
+            <button className="hover:text-[#2c2c2c] flex items-center">
+              English (US)
+              <svg
+                className="w-3 h-3 ml-1"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </button>
+            <a href="#" className="hover:text-[#2c2c2c]">
+              Contact Us
+            </a>
+            <a href="#" className="hover:text-[#2c2c2c]">
+              Terms of Use
+            </a>
+            <a href="#" className="hover:text-[#2c2c2c]">
+              Privacy
+            </a>
+            <a href="#" className="hover:text-[#2c2c2c]">
+              Intellectual Property
+            </a>
+            <a href="#" className="hover:text-[#2c2c2c]">
+              Trust
+            </a>
+          </div>
+          <div className="hidden lg:block">
+            <span>Copyright © 2025 Docusign, Inc. All rights reserved</span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
