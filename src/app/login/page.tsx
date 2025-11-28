@@ -112,6 +112,28 @@ export default function LoginPage() {
               >
                 Sign Up for Free
               </button>
+
+              <div className="mt-8 pt-6 border-t border-gray-200">
+                <p className="text-xs text-gray-500 text-center mb-3">
+                  Quick Login (Demo Only)
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => quickLogin("alex@acme.com")}
+                    className="py-2.5 px-3 border border-gray-300 rounded text-xs font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Alex (Sender)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => quickLogin("blake@acme.com")}
+                    className="py-2.5 px-3 border border-gray-300 rounded text-xs font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Blake (Signer)
+                  </button>
+                </div>
+              </div>
             </form>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">

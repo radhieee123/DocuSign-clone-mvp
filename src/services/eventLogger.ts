@@ -1,4 +1,4 @@
-import { prisma } from "../server/db";
+import { prisma } from "./db";
 import { EventActionType, EventLogPayload } from "@/types";
 
 export async function logEvent(

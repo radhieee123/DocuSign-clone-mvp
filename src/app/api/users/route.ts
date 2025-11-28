@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/server/db";
-import { verifyToken, extractTokenFromHeader } from "@/lib/auth";
+import { prisma } from "@/services/db";
+import { verifyToken, extractTokenFromHeader } from "@/services/auth";
 import { ApiErrorResponse } from "@/types";
 
 export async function GET(request: NextRequest) {

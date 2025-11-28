@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/server/db";
-import { generateToken } from "@/lib/auth";
-import { EventLogger } from "@/loggers/eventLogger";
+import { prisma } from "@/services/db";
+import { generateToken } from "@/services/auth";
+import { EventLogger } from "@/services/eventLogger";
 import { LoginRequest, LoginResponse, ApiErrorResponse } from "@/types";
 
 export async function POST(request: NextRequest) {
