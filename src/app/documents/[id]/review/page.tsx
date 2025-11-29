@@ -1,10 +1,15 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiClient } from "@/services/apiClient";
 import { Document } from "@/types";
+
+interface SignaturePosition {
+  x: number;
+  y: number;
+}
 
 export default function SignDocumentPage() {
   const { user } = useAuth();
@@ -17,8 +22,13 @@ export default function SignDocumentPage() {
   const [fullName, setFullName] = useState("");
   const [initials, setInitials] = useState("");
   const [signaturePlaced, setSignaturePlaced] = useState(false);
-  const [showFinishPrompt, setShowFinishPrompt] = useState(false);
   const [isSigning, setIsSigning] = useState(false);
+  const [signaturePosition, setSignaturePosition] = useState<SignaturePosition>(
+    { x: 200, y: 300 }
+  );
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const documentContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!user) {
@@ -44,28 +54,22 @@ export default function SignDocumentPage() {
 
     try {
       console.log("Loading document:", params.id);
-
-      // Fetch the specific document by ID
       const doc = await apiClient.getDocumentById(params.id as string);
 
       console.log("Document loaded:", {
         id: doc.id,
         title: doc.title,
         hasFileData: !!doc.fileData,
-        fileDataLength: doc.fileData?.length,
         fileType: doc.fileType,
         status: doc.status,
       });
 
       setDocument(doc);
 
-      // Check if user is the recipient
       if (user && doc.recipientId !== user.id) {
         console.warn("User is not the recipient of this document");
-        // You can redirect or show a message here if needed
       }
 
-      // If already signed, mark signature as placed
       if (doc.status === "SIGNED") {
         setSignaturePlaced(true);
       }
@@ -91,16 +95,22 @@ export default function SignDocumentPage() {
 
     setIsSigning(true);
     try {
+      // Save document with signature data including position
       await apiClient.signDocument(params.id as string, {
         signedAt: new Date().toISOString(),
         signature: fullName,
         initials: initials,
+        // You can add these fields if you update your backend schema
+        // signaturePositionX: signaturePosition.x,
+        // signaturePositionY: signaturePosition.y,
       });
 
-      // Show success message
-      alert("Document signed successfully!");
+      console.log(
+        "Document signed with signature at position:",
+        signaturePosition
+      );
 
-      // Redirect to dashboard
+      alert("Document signed successfully!");
       router.push("/dashboard");
     } catch (error) {
       console.error("Failed to sign:", error);
@@ -110,23 +120,73 @@ export default function SignDocumentPage() {
     }
   };
 
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!signaturePlaced || isAlreadySigned) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const signatureElement = e.currentTarget as HTMLElement;
+    const rect = signatureElement.getBoundingClientRect();
+
+    setIsDragging(true);
+    setDragOffset({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    });
+  };
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!isDragging || !documentContainerRef.current) return;
+
+    const containerRect = documentContainerRef.current.getBoundingClientRect();
+
+    const newX = e.clientX - containerRect.left - dragOffset.x;
+    const newY = e.clientY - containerRect.top - dragOffset.y;
+
+    // Keep signature within bounds
+    const maxX = containerRect.width - 200; // signature width
+    const maxY = containerRect.height - 50; // signature height
+
+    setSignaturePosition({
+      x: Math.max(0, Math.min(newX, maxX)),
+      y: Math.max(0, Math.min(newY, maxY)),
+    });
+  };
+
+  const handleMouseUp = () => {
+    if (isDragging) {
+      console.log("Signature positioned at:", signaturePosition);
+    }
+    setIsDragging(false);
+  };
+
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+      return () => {
+        window.removeEventListener("mousemove", handleMouseMove);
+        window.removeEventListener("mouseup", handleMouseUp);
+      };
+    }
+  }, [isDragging, dragOffset]);
+
   const renderDocumentContent = () => {
     if (!document) return null;
 
-    // Handle PDF files with fileData (base64)
     if (document.fileData && document.fileType === "application/pdf") {
       return (
-        <div className="w-full h-full">
-          <iframe
+        <div className="w-full">
+          <embed
             src={document.fileData}
-            className="w-full min-h-[1000px] border-0"
-            title={document.fileName || "Document Preview"}
+            type="application/pdf"
+            className="w-full h-[1200px]"
           />
         </div>
       );
     }
 
-    // Fallback: Show message if no file data
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
@@ -218,6 +278,21 @@ export default function SignDocumentPage() {
           >
             {isSigning ? "Signing..." : "Finish"}
           </button>
+          <button className="p-2 hover:bg-purple-800 rounded">
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </button>
           <button
             onClick={() => router.push("/dashboard")}
             className="p-2 hover:bg-purple-800 rounded"
@@ -240,111 +315,6 @@ export default function SignDocumentPage() {
       </div>
 
       <div className="flex flex-1">
-        {/* Document Info Panel */}
-        <aside className="w-80 bg-white border-r border-gray-200 flex flex-col">
-          <div className="p-4 border-b border-gray-200">
-            <h2 className="text-sm font-semibold text-gray-700">
-              DOCUMENT INFO
-            </h2>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {/* Status */}
-            <div>
-              <label className="text-xs font-semibold text-gray-500 uppercase">
-                Status
-              </label>
-              <div className="mt-1">
-                <span
-                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    document.status === "PENDING"
-                      ? "bg-yellow-100 text-yellow-800"
-                      : document.status === "SIGNED"
-                      ? "bg-green-100 text-green-800"
-                      : document.status === "DECLINED"
-                      ? "bg-red-100 text-red-800"
-                      : "bg-gray-100 text-gray-800"
-                  }`}
-                >
-                  {document.status}
-                </span>
-              </div>
-            </div>
-
-            {/* Sender Info */}
-            {document.sender && (
-              <div>
-                <label className="text-xs font-semibold text-gray-500 uppercase">
-                  Sent By
-                </label>
-                <div className="mt-1">
-                  <div className="text-sm font-medium text-gray-900">
-                    {document.sender.name}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {document.sender.email}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Recipient Info */}
-            {document.recipient && (
-              <div>
-                <label className="text-xs font-semibold text-gray-500 uppercase">
-                  Recipient
-                </label>
-                <div className="mt-1">
-                  <div className="text-sm font-medium text-gray-900">
-                    {document.recipient.name}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {document.recipient.email}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Dates */}
-            <div>
-              <label className="text-xs font-semibold text-gray-500 uppercase">
-                Requested At
-              </label>
-              <div className="mt-1 text-sm text-gray-900">
-                {new Date(document.requestedAt).toLocaleString()}
-              </div>
-            </div>
-
-            {document.signedAt && (
-              <div>
-                <label className="text-xs font-semibold text-gray-500 uppercase">
-                  Signed At
-                </label>
-                <div className="mt-1 text-sm text-gray-900">
-                  {new Date(document.signedAt).toLocaleString()}
-                </div>
-              </div>
-            )}
-
-            {/* File Info */}
-            {document.fileName && (
-              <div>
-                <label className="text-xs font-semibold text-gray-500 uppercase">
-                  File Details
-                </label>
-                <div className="mt-1 space-y-1">
-                  <div className="text-sm text-gray-900">
-                    {document.fileName}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {document.fileType}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </aside>
-
         {/* Fields Panel */}
         <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
           <div className="p-4 border-b border-gray-200">
@@ -457,6 +427,46 @@ export default function SignDocumentPage() {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
+                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                />
+              </svg>
+              <span>Company</span>
+            </button>
+
+            <button
+              disabled={isAlreadySigned}
+              className="flex items-center space-x-3 w-full px-3 py-2 hover:bg-gray-50 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                />
+              </svg>
+              <span>Title</span>
+            </button>
+
+            <button
+              disabled={isAlreadySigned}
+              className="flex items-center space-x-3 w-full px-3 py-2 hover:bg-gray-50 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
                   d="M4 6h16M4 12h16M4 18h7"
                 />
               </svg>
@@ -487,60 +497,53 @@ export default function SignDocumentPage() {
 
         {/* Document Viewer */}
         <main className="flex-1 overflow-auto bg-gray-200 p-8">
-          <div className="max-w-4xl mx-auto bg-white shadow-lg min-h-[1000px] relative">
-            {/* Document Title Header */}
-            {document.title && (
-              <div className="bg-gray-50 border-b border-gray-200 px-8 py-4">
-                <h1 className="text-xl font-semibold text-gray-800">
-                  {document.title}
-                </h1>
-                <div className="text-xs text-gray-500 mt-1">
-                  Document ID: {document.id}
-                  {document.sender && (
-                    <span className="ml-4">
-                      Sent by: {document.sender.name} ({document.sender.email})
-                    </span>
+          <div
+            ref={documentContainerRef}
+            className="max-w-4xl mx-auto bg-white shadow-lg min-h-[1200px] relative"
+          >
+            {renderDocumentContent()}
+
+            {/* Draggable Signature - NO BACKGROUND, JUST TEXT */}
+            {signaturePlaced && (
+              <div
+                className="absolute cursor-move select-none group"
+                style={{
+                  left: `${signaturePosition.x}px`,
+                  top: `${signaturePosition.y}px`,
+                  zIndex: 10, // Lower than modal (which is 9999)
+                }}
+                onMouseDown={handleMouseDown}
+              >
+                <div className="relative px-2 py-1">
+                  {/* Just the signature text - no background */}
+                  <div className="font-['Brush_Script_MT',cursive] text-2xl text-gray-900">
+                    {fullName}
+                  </div>
+
+                  {/* Delete button - only shows on hover */}
+                  {!isAlreadySigned && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSignaturePlaced(false);
+                      }}
+                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-sm hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                    >
+                      ×
+                    </button>
                   )}
+
+                  {/* Dashed border - only shows on hover */}
+                  <div className="absolute inset-0 border-2 border-dashed border-blue-400 rounded-md opacity-0 group-hover:opacity-100 pointer-events-none -m-1"></div>
                 </div>
               </div>
             )}
-
-            <div className="p-12">
-              {renderDocumentContent()}
-
-              {/* Signature Placement */}
-              {signaturePlaced && (
-                <div
-                  className="absolute"
-                  style={{ top: "300px", left: "200px" }}
-                >
-                  <div className="bg-red-50 border-2 border-red-300 rounded p-2 relative">
-                    <div className="font-['Brush_Script_MT',cursive] text-lg">
-                      {fullName}
-                    </div>
-                    {!isAlreadySigned && (
-                      <button
-                        onClick={() => setSignaturePlaced(false)}
-                        className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600"
-                      >
-                        ×
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
         </main>
 
         {/* Tools Sidebar */}
         <aside className="w-16 bg-white border-l border-gray-200 flex flex-col items-center py-4 space-y-4">
-          <button className="p-2 text-purple-600 hover:bg-purple-50 rounded">
-            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-            </svg>
-          </button>
-          <button className="p-2 hover:bg-gray-100 rounded">
+          <button className="p-2 hover:bg-gray-100 rounded" title="Zoom In">
             <svg
               className="w-6 h-6"
               fill="none"
@@ -555,7 +558,7 @@ export default function SignDocumentPage() {
               />
             </svg>
           </button>
-          <button className="p-2 hover:bg-gray-100 rounded">
+          <button className="p-2 hover:bg-gray-100 rounded" title="Zoom Out">
             <svg
               className="w-6 h-6"
               fill="none"
@@ -570,12 +573,27 @@ export default function SignDocumentPage() {
               />
             </svg>
           </button>
+          <button className="p-2 hover:bg-gray-100 rounded" title="Download">
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+              />
+            </svg>
+          </button>
         </aside>
       </div>
 
-      {/* Signature Modal */}
+      {/* Signature Modal - High z-index so it's always on top */}
       {showSignatureModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
           <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full mx-4">
             <div className="p-6 border-b border-gray-200 flex items-center justify-between">
               <h2 className="text-xl font-semibold">Adopt Your Signature</h2>
@@ -680,7 +698,7 @@ export default function SignDocumentPage() {
                           {fullName}
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
-                          {document.id.substring(0, 20)}...
+                          {document?.id.substring(0, 20)}...
                         </div>
                       </div>
                       <div>
@@ -716,24 +734,6 @@ export default function SignDocumentPage() {
               </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Finish Prompt */}
-      {showFinishPrompt && !isAlreadySigned && (
-        <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-white shadow-2xl rounded-lg p-6 max-w-md border border-gray-200 z-50">
-          <h3 className="text-lg font-semibold mb-2">Ready to Finish?</h3>
-          <p className="text-sm text-gray-600 mb-4">
-            You've completed the required fields. Review your work, then select
-            Finish.
-          </p>
-          <button
-            onClick={handleFinish}
-            disabled={isSigning}
-            className="w-full py-3 bg-purple-600 text-white font-medium rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSigning ? "Signing..." : "Finish"}
-          </button>
         </div>
       )}
 
