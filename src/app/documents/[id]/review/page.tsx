@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiClient } from "@/services/apiClient";
@@ -9,14 +9,42 @@ export default function SignDocumentPage() {
   const { user } = useAuth();
   const router = useRouter();
   const params = useParams();
+  const [document, setDocument] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [showSignatureModal, setShowSignatureModal] = useState(false);
-  const [signatureTab, setSignatureTab] = useState<"style" | "draw" | "upload">(
-    "style"
-  );
-  const [fullName, setFullName] = useState("Radhika Daxini");
-  const [initials, setInitials] = useState("RD");
+  const [fullName, setFullName] = useState("");
+  const [initials, setInitials] = useState("");
   const [signaturePlaced, setSignaturePlaced] = useState(false);
   const [showFinishPrompt, setShowFinishPrompt] = useState(false);
+
+  useEffect(() => {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    setFullName(user.name || "User");
+    setInitials(
+      user.name
+        ?.split(" ")
+        .map((n: string) => n[0])
+        .join("") || "U"
+    );
+    loadDocument();
+  }, [user, params.id]);
+
+  const loadDocument = async () => {
+    try {
+      const docs = await apiClient.getDocuments();
+      const doc = docs.find((d: any) => d.id === params.id);
+      if (doc) {
+        setDocument(doc);
+      }
+    } catch (error) {
+      console.error("Failed to load document:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleAdoptSignature = () => {
     setShowSignatureModal(false);
@@ -32,6 +60,22 @@ export default function SignDocumentPage() {
       console.error("Failed to sign:", error);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-600">Loading document...</div>
+      </div>
+    );
+  }
+
+  if (!document) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-red-600">Document not found</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">

@@ -30,7 +30,7 @@ export interface Document {
   recipient?: User;
 }
 
-export type DocumentStatus = "PENDING" | "SIGNED" | "COMPLETED";
+export type DocumentStatus = 'PENDING' | 'SIGNED' | 'COMPLETED';
 
 // API Request/Response Types
 export interface LoginRequest {
@@ -66,12 +66,12 @@ export interface SignDocumentResponse {
 }
 
 // Event Logging Types
-export type EventActionType =
-  | "LOGIN"
-  | "DOCUMENT_REQUESTED"
-  | "SIGN_ACTION"
-  | "DASHBOARD_VIEW"
-  | "CUSTOM";
+export type EventActionType = 
+  | 'LOGIN'
+  | 'DOCUMENT_REQUESTED'
+  | 'SIGN_ACTION'
+  | 'DASHBOARD_VIEW'
+  | 'CUSTOM';
 
 export interface EventLogPayload {
   user_id?: string;

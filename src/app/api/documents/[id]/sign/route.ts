@@ -3,18 +3,14 @@ import { prisma } from "@/services/db";
 import { verifyToken, extractTokenFromHeader } from "@/services/auth";
 import { EventLogger } from "@/services/eventLogger";
 import {
-  SignDocumentRequest,
-  SignDocumentResponse,
+  CreateDocumentRequest,
+  CreateDocumentResponse,
+  Document,
   ApiErrorResponse,
 } from "@/types";
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest) {
   try {
-    const documentId = params.id;
-
     const token = extractTokenFromHeader(
       request.headers.get("Authorization") || ""
     );
@@ -35,42 +31,115 @@ export async function POST(
       );
     }
 
-    const document = await prisma.document.findUnique({
-      where: { id: documentId },
+    // Retrieve documents where user is sender or recipient
+    const documents = await prisma.document.findMany({
+      where: {
+        OR: [{ senderId: user.id }, { recipientId: user.id }],
+      },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        recipient: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: {
+        requestedAt: "desc",
+      },
     });
 
-    if (!document) {
+    return NextResponse.json<Document[]>(documents as any as Document[], {
+      status: 200,
+    });
+  } catch (error) {
+    console.error("Get documents error:", error);
+    return NextResponse.json<ApiErrorResponse>(
+      { error: "SERVER_ERROR", message: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+// POST /api/documents - Create a new document request
+export async function POST(request: NextRequest) {
+  try {
+    // Extract and verify token
+    const token = extractTokenFromHeader(
+      request.headers.get("Authorization") || ""
+    );
+
+    if (!token) {
+      console.error("No token provided");
       return NextResponse.json<ApiErrorResponse>(
-        { error: "NOT_FOUND", message: "Document not found" },
-        { status: 404 }
+        { error: "UNAUTHORIZED", message: "No authorization token provided" },
+        { status: 401 }
       );
     }
 
-    if (document.recipientId !== user.id) {
+    const user = verifyToken(token);
+
+    if (!user) {
+      console.error("Invalid token");
       return NextResponse.json<ApiErrorResponse>(
-        {
-          error: "FORBIDDEN",
-          message: "Only the recipient can sign this document",
-        },
-        { status: 403 }
+        { error: "UNAUTHORIZED", message: "Invalid or expired token" },
+        { status: 401 }
       );
     }
 
-    if (document.status !== "PENDING") {
+    const body: CreateDocumentRequest = await request.json();
+    const { title, recipientId, fileData, fileName, fileType } = body;
+
+    console.log("Creating document:", {
+      title,
+      recipientId,
+      senderId: user.id,
+      hasFile: !!fileData,
+    });
+
+    // Validate input
+    if (!title || !recipientId) {
+      console.error("Missing required fields:", { title, recipientId });
       return NextResponse.json<ApiErrorResponse>(
         {
           error: "VALIDATION_ERROR",
-          message: `Document is already ${document.status}`,
+          message: "Title and recipientId are required",
         },
         { status: 400 }
       );
     }
 
-    const updatedDocument = await prisma.document.update({
-      where: { id: documentId },
+    // Validate recipient exists
+    const recipient = await prisma.user.findUnique({
+      where: { id: recipientId },
+    });
+
+    if (!recipient) {
+      console.error("Recipient not found:", recipientId);
+      return NextResponse.json<ApiErrorResponse>(
+        { error: "VALIDATION_ERROR", message: "Recipient not found" },
+        { status: 400 }
+      );
+    }
+
+    // Create the document
+    const document = await prisma.document.create({
       data: {
-        status: "SIGNED",
-        signedAt: new Date(),
+        title,
+        senderId: user.id,
+        recipientId,
+        status: "PENDING",
+        fileData: fileData || null,
+        fileName: fileName || null,
+        fileType: fileType || null,
       },
       include: {
         sender: {
@@ -90,19 +159,35 @@ export async function POST(
       },
     });
 
-    await EventLogger.signAction(user.id, documentId, "SIGNED");
+    console.log("Document created successfully:", document.id);
 
-    return NextResponse.json<SignDocumentResponse>(
-      {
-        document: updatedDocument,
-        message: "Document signed successfully",
-      },
-      { status: 200 }
+    // Log the event
+    await EventLogger.documentRequested(
+      user.id,
+      document.id,
+      recipientId,
+      title
     );
-  } catch (error) {
-    console.error("Sign document error:", error);
+
+    return NextResponse.json<CreateDocumentResponse>(
+      {
+        document: document as any as Document,
+        message: "Document request created successfully",
+      },
+      { status: 201 }
+    );
+  } catch (error: any) {
+    console.error("Create document error:", error);
+    console.error("Error details:", {
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name,
+    });
     return NextResponse.json<ApiErrorResponse>(
-      { error: "SERVER_ERROR", message: "Internal server error" },
+      {
+        error: "SERVER_ERROR",
+        message: error?.message || "Internal server error",
+      },
       { status: 500 }
     );
   }

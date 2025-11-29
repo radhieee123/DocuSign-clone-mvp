@@ -31,11 +31,6 @@ model Document {
   requestedAt  DateTime  @default(now())
   signedAt     DateTime?
   
-  // File storage
-  fileData     String?   // Base64 encoded file content
-  fileName     String?
-  fileType     String?   // MIME type
-  
   // Foreign Keys
   senderId     String
   recipientId  String

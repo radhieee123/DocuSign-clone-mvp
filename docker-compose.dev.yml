@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  docusign-mvp-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: docusign-mvp-dev
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=file:./data/dev.db
+      - JWT_SECRET=dev-secret-key
+    volumes:
+      # Mount source code for hot reload
+      - ./src:/app/src
+      - ./public:/app/public
+      - ./prisma:/app/prisma
+      # Persist SQLite database
+      - docusign-dev-data:/app/data
+      # Prevent node_modules from being overwritten
+      - /app/node_modules
+      - /app/.next
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+
+volumes:
+  docusign-dev-data:
+    driver: local

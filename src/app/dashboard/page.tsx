@@ -20,6 +20,8 @@ export default function DashboardPage() {
       return;
     }
     loadDocuments();
+    const interval = setInterval(loadDocuments, 5000);
+    return () => clearInterval(interval);
   }, [user, router]);
 
   const loadDocuments = async () => {
