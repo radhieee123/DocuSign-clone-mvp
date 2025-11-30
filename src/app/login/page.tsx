@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { USERS } from "@/constants";
+import Image from "next/image";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -45,10 +46,12 @@ export default function LoginPage() {
       <header className="px-8 py-6">
         <div className="flex items-center space-x-2">
           <div className="w-[100px] h-[30px] flex items-center justify-center">
-            <img
+            <Image
               data-qa="header-docusign-logo"
               alt="Docusign eSignature"
               src="https://docucdn-a.akamaihd.net/olive/images/2.102.0/global-assets/ds-logo-default.svg"
+              width={100}
+              height={30}
               className="css-1sz9cjp"
             />
           </div>
@@ -189,10 +192,12 @@ export default function LoginPage() {
             <span>Powered by</span>
             <div className="flex items-center space-x-1">
               <div className="w-[50px] h-[10px] rounded-[2px]">
-                <img
+                <Image
                   data-qa="header-docusign-logo"
                   alt="Docusign eSignature"
                   src="https://docucdn-a.akamaihd.net/olive/images/2.102.0/global-assets/ds-logo-default.svg"
+                  width={50}
+                  height={10}
                   className="css-1sz9cjp"
                 />
               </div>

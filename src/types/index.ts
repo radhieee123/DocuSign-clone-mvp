@@ -13,10 +13,18 @@ export interface UserPayload {
   name: string;
 }
 
+export type DocumentStatus = "PENDING" | "SIGNED" | "COMPLETED";
+
+export interface DocumentUser {
+  id: string;
+  name: string;
+  email: string;
+}
+
 export interface Document {
   id: string;
   title: string;
-  status: DocumentStatus;
+  status: string;
   requestedAt: Date;
   signedAt: Date | null;
   senderId: string;
@@ -24,11 +32,9 @@ export interface Document {
   fileData?: string | null;
   fileName?: string | null;
   fileType?: string | null;
-  sender?: User;
-  recipient?: User;
+  sender?: DocumentUser;
+  recipient?: DocumentUser;
 }
-
-export type DocumentStatus = "PENDING" | "SIGNED" | "COMPLETED";
 
 export interface LoginRequest {
   email: string;

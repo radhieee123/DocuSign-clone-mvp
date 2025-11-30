@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { apiClient } from "@/services/apiClient";
 import { Document } from "@/types";
 import Link from "next/link";
+import Image from "next/image";
 import { DOCUMENT_STATUS } from "@/constants";
 
 export default function DashboardPage() {
@@ -61,10 +62,12 @@ export default function DashboardPage() {
                 href="/dashboard"
                 className="flex items-center space-x-2 w-[104px] h-[40px]"
               >
-                <img
+                <Image
                   data-qa="header-docusign-logo"
                   alt="Docusign eSignature"
                   src="https://docucdn-a.akamaihd.net/olive/images/2.102.0/global-assets/ds-logo-default.svg"
+                  width={104}
+                  height={40}
                   className="css-1sz9cjp"
                 />
               </Link>
@@ -609,7 +612,7 @@ function AgreementsContent({
               </a>
             </div>
             <button className="text-sm text-gray-600 hover:text-gray-900">
-              What's next?
+              What&apos;s next?
             </button>
           </div>
           <button

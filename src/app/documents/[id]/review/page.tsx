@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { PDFDocument, rgb } from "pdf-lib";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
@@ -31,22 +31,7 @@ export default function SignDocumentPage() {
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const documentContainerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!user) {
-      router.push("/login");
-      return;
-    }
-    setFullName(user.name || "User");
-    setInitials(
-      user.name
-        ?.split(" ")
-        .map((n: string) => n[0])
-        .join("") || "U"
-    );
-    loadDocument();
-  }, [user, params.id]);
-
-  const loadDocument = async () => {
+  const loadDocument = useCallback(async () => {
     if (!params.id) {
       console.error("No document ID provided");
       setIsLoading(false);
@@ -75,7 +60,22 @@ export default function SignDocumentPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [params.id, user]);
+
+  useEffect(() => {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    setFullName(user.name || "User");
+    setInitials(
+      user.name
+        ?.split(" ")
+        .map((n: string) => n[0])
+        .join("") || "U"
+    );
+    loadDocument();
+  }, [user, router, loadDocument]);
 
   const handleAdoptSignature = () => {
     setShowSignatureModal(false);
@@ -177,7 +177,7 @@ export default function SignDocumentPage() {
         initials: initials,
         signaturePositionX: signaturePosition.x,
         signaturePositionY: signaturePosition.y,
-        fileData: signedPdfData,
+        fileData: signedPdfData || undefined,
       });
 
       alert("Document signed successfully!");
@@ -202,29 +202,33 @@ export default function SignDocumentPage() {
     });
   };
 
-  const handleMouseMove = (e: MouseEvent) => {
-    if (!isDragging || !documentContainerRef.current) return;
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (!isDragging || !documentContainerRef.current) return;
 
-    const containerRect = documentContainerRef.current.getBoundingClientRect();
+      const containerRect =
+        documentContainerRef.current.getBoundingClientRect();
 
-    const newX = e.clientX - containerRect.left - dragOffset.x;
-    const newY = e.clientY - containerRect.top - dragOffset.y;
+      const newX = e.clientX - containerRect.left - dragOffset.x;
+      const newY = e.clientY - containerRect.top - dragOffset.y;
 
-    const maxX = containerRect.width - 200;
-    const maxY = containerRect.height - 50;
+      const maxX = containerRect.width - 200;
+      const maxY = containerRect.height - 50;
 
-    setSignaturePosition({
-      x: Math.max(0, Math.min(newX, maxX)),
-      y: Math.max(0, Math.min(newY, maxY)),
-    });
-  };
+      setSignaturePosition({
+        x: Math.max(0, Math.min(newX, maxX)),
+        y: Math.max(0, Math.min(newY, maxY)),
+      });
+    },
+    [isDragging, dragOffset.x, dragOffset.y]
+  );
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     if (isDragging) {
       console.log("Signature positioned at:", signaturePosition);
     }
     setIsDragging(false);
-  };
+  }, [isDragging, signaturePosition]);
 
   useEffect(() => {
     if (isDragging) {
@@ -235,7 +239,7 @@ export default function SignDocumentPage() {
         window.removeEventListener("mouseup", handleMouseUp);
       };
     }
-  }, [isDragging, dragOffset]);
+  }, [isDragging, handleMouseMove, handleMouseUp]);
 
   const renderDocumentContent = () => {
     if (!document) return null;
@@ -311,7 +315,8 @@ export default function SignDocumentPage() {
             Document not found
           </h3>
           <p className="mt-2 text-sm text-gray-500">
-            The document you're looking for doesn't exist or has been removed.
+            The document you&apos;re looking for doesn&apos;t exist or has been
+            removed.
           </p>
           <button
             onClick={() => router.push("/dashboard")}

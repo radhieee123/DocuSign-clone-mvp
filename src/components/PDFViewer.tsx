@@ -1,5 +1,6 @@
 "use client";
 
+import { USERS } from "@/constants";
 import React, { useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/esm/Page/AnnotationLayer.css";
@@ -51,16 +52,15 @@ export default function PDFViewer() {
             </h3>
 
             <p className="text-gray-700 mb-4">
-              This agreement ("Agreement") is entered into as of [Date] by and
-              between:
+              This Agreement is entered into as of [Date] by and between:
             </p>
 
             <ul className="list-disc pl-6 mb-4 text-gray-700">
               <li>
-                <strong>Party A:</strong> Sender Alex, alex@acme.com
+                <strong>Party A:</strong> Sender Alex, {USERS.ALEX.EMAIL}
               </li>
               <li>
-                <strong>Party B:</strong> Signer Blake, blake@acme.com
+                <strong>Party B:</strong> Signer Blake, {USERS.BLAKE.EMAIL}
               </li>
             </ul>
 

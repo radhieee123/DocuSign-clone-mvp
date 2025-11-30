@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    return NextResponse.json<Document[]>(documents, { status: 200 });
+    return NextResponse.json(documents as Document[], { status: 200 });
   } catch (error) {
     console.error("Get documents error:", error);
     return NextResponse.json<ApiErrorResponse>(

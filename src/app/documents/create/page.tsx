@@ -487,7 +487,7 @@ export default function CreateDocumentPage() {
                       className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
                     />
                     <span className="text-sm text-gray-700">
-                      I'm the only signer
+                      I am the only signer
                     </span>
                     <button className="text-gray-400 hover:text-gray-600">
                       <svg
