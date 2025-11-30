@@ -1,12 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: false,
   output: "standalone",
   eslint: {
-    // Disable ESLint during production builds
     ignoreDuringBuilds: true,
   },
   typescript: {
-    // Disable TypeScript errors during builds (optional)
     ignoreBuildErrors: false,
   },
   webpack: (config) => {

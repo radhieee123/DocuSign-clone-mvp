@@ -7,7 +7,7 @@ import "react-pdf/dist/esm/Page/TextLayer.css";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
-const MOCK_PDF_URL = "/sample-contract.pdf";
+const MOCK_PDF_URL = "sample-pdfs/sample-contract.pdf";
 
 export default function PDFViewer() {
   const [numPages, setNumPages] = useState<number | null>(null);

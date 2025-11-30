@@ -36,12 +36,71 @@ export default function CreateDocumentPage() {
   const [reminderFrequency, setReminderFrequency] = useState("Every day");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [templateFileData, setTemplateFileData] = useState<string | null>(null);
+  const [documentTitle, setDocumentTitle] = useState("");
 
   React.useEffect(() => {
     if (!user) {
       router.push("/login");
     }
   }, [user, router]);
+
+  React.useEffect(() => {
+    const templateData = localStorage.getItem("templatePDF");
+    if (templateData) {
+      try {
+        const template = JSON.parse(templateData);
+        console.log("Loading template from localStorage:", {
+          fileName: template.fileName,
+          fileSize: template.fileSize,
+          title: template.title,
+          hasFileData: !!template.fileData,
+        });
+
+        // Convert base64 back to File object
+        const base64Data = template.fileData.split(",")[1];
+        const byteCharacters = atob(base64Data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: "application/pdf" });
+        const file = new File([blob], template.fileName, {
+          type: "application/pdf",
+        });
+
+        console.log("Template File object created:", {
+          name: file.name,
+          size: file.size,
+          type: file.type,
+        });
+
+        setUploadedFiles([
+          {
+            id: "1",
+            name: template.fileName,
+            size: template.fileSize || file.size,
+            type: template.fileType,
+            file: file, // Store the actual File object
+          },
+        ]);
+
+        // Store the base64 data for later use
+        setTemplateFileData(template.fileData);
+
+        // Set the document title
+        setSubject(template.title);
+        setDocumentTitle(template.title);
+
+        // Clear localStorage
+        localStorage.removeItem("templatePDF");
+      } catch (error) {
+        console.error("Failed to parse template data:", error);
+        localStorage.removeItem("templatePDF");
+      }
+    }
+  }, []);
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return "0 Bytes";
@@ -171,12 +230,26 @@ export default function CreateDocumentPage() {
       let fileName: string | null = null;
       let fileType: string | null = null;
 
-      if (uploadedFiles.length > 0) {
+      // Priority 1: Use template data if available
+      if (templateFileData) {
+        fileData = templateFileData;
+        fileName = uploadedFiles[0]?.name || "template.pdf";
+        fileType = "application/pdf";
+
+        console.log("Using template file:", {
+          fileName,
+          fileType,
+          dataLength: fileData.length,
+          prefix: fileData.substring(0, 50),
+        });
+      }
+      // Priority 2: Use uploaded file
+      else if (uploadedFiles.length > 0) {
         const uploadedFile = uploadedFiles[0];
         fileName = uploadedFile.name;
         fileType = uploadedFile.type;
 
-        console.log("Reading file:", {
+        console.log("Reading uploaded file:", {
           name: fileName,
           type: fileType,
           size: uploadedFile.size,
@@ -200,8 +273,10 @@ export default function CreateDocumentPage() {
         }
       }
 
+      const documentTitle = subject || "Document";
+
       console.log("Creating document with:", {
-        title: subject || "Document",
+        title: documentTitle,
         recipientId: recipient.id,
         recipientEmail: recipient.email,
         hasFileData: !!fileData,
@@ -211,7 +286,7 @@ export default function CreateDocumentPage() {
       });
 
       const doc = await apiClient.createDocument({
-        title: subject || "Document",
+        title: documentTitle,
         recipientId: recipient.id,
         fileData: fileData || undefined,
         fileName: fileName || undefined,
@@ -219,6 +294,10 @@ export default function CreateDocumentPage() {
       });
 
       console.log("Document created successfully:", doc);
+
+      // Clear template data
+      setTemplateFileData(null);
+      setDocumentTitle("");
 
       router.push("/dashboard");
     } catch (err: any) {
@@ -277,7 +356,7 @@ export default function CreateDocumentPage() {
             <button className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50">
               ADVANCED OPTIONS
             </button>
-            <button className="px-4 py-2 text-sm text-white bg-purple-600 rounded-md hover:bg-purple-700">
+            <button className="px-4 py-2 text-sm text-white bg-[#4c00fb] rounded-md hover:bg-[#4c00fb]">
               VIEW & PLANS
             </button>
           </div>
@@ -285,14 +364,14 @@ export default function CreateDocumentPage() {
       </header>
 
       <main className="flex-1 py-8">
-        <div className="max-w-4xl mx-auto px-6 space-y-6">
+        <div className="max-w-[75%] mx-auto space-y-6">
           {error && (
             <div className="rounded-md bg-red-50 p-4">
               <p className="text-sm text-red-800">{error}</p>
             </div>
           )}
 
-          <section className="bg-white rounded-lg border border-gray-200">
+          <section className="">
             <button className="w-full flex items-center justify-between px-6 py-4 text-left">
               <h2 className="text-base font-medium text-gray-900">
                 Add documents
@@ -357,9 +436,21 @@ export default function CreateDocumentPage() {
                       e.stopPropagation();
                       handleUploadClick();
                     }}
-                    className="px-6 py-2 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700"
+                    className="px-4 py-2 bg-[#4c00fb] text-white text-sm font-medium rounded-[4px] hover:bg-#4c00fb flex items-center space-x-2"
                   >
                     Upload
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      width="16"
+                      height="16"
+                      aria-hidden="true"
+                      fill="rgba(255, 255, 255, 1)"
+                      focusable="false"
+                      data-qa="icon-element-menuTriangleDown"
+                    >
+                      <path d="M10.62 12.73 15 8H5l4.38 4.73a.85.85 0 0 0 1.24 0"></path>
+                    </svg>
                   </button>
                 </div>
               </div>
@@ -422,7 +513,9 @@ export default function CreateDocumentPage() {
             </div>
           </section>
 
-          <section className="bg-white rounded-lg border border-gray-200">
+          <hr />
+
+          <section className="">
             <button className="w-full flex items-center justify-between px-6 py-4 text-left">
               <h2 className="text-base font-medium text-gray-900">
                 Add recipients
@@ -477,14 +570,14 @@ export default function CreateDocumentPage() {
                       type="checkbox"
                       checked={setSigningOrder}
                       onChange={(e) => setSetSigningOrder(e.target.checked)}
-                      className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                      className="w-4 h-4 text-[#4c00fb] border-gray-300 rounded focus:ring-[#4c00fb]"
                     />
                     <span className="text-sm text-gray-700">
                       Set signing order
                     </span>
                     <a
                       href="#"
-                      className="text-sm text-purple-600 hover:text-purple-700"
+                      className="text-sm text-[#4c00fb] hover:text-[#4c00fb]"
                     >
                       View
                     </a>
@@ -680,7 +773,9 @@ export default function CreateDocumentPage() {
             </div>
           </section>
 
-          <section className="bg-white rounded-lg border border-gray-200">
+          <hr />
+
+          <section className="">
             <button className="w-full flex items-center justify-between px-6 py-4 text-left">
               <h2 className="text-base font-medium text-gray-900">
                 Add message
@@ -753,15 +848,17 @@ export default function CreateDocumentPage() {
               </div>
             </div>
           </section>
+
+          <hr />
         </div>
       </main>
 
       <div className="bg-white border-t border-gray-200 px-6 py-4">
-        <div className="max-w-4xl mx-auto flex justify-end">
+        <div className="mx-auto flex justify-end">
           <button
             onClick={handleNext}
             disabled={isLoading || !recipients[0].name || !recipients[0].email}
-            className="px-8 py-2 bg-purple-600 text-white font-medium rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-8 py-2 bg-[#4c00fb] text-white font-medium rounded-md hover:bg-[#4c00fb] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? "Processing..." : "Next"}
           </button>

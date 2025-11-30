@@ -123,9 +123,6 @@ export default function SignDocumentPage() {
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!signaturePlaced || isAlreadySigned) return;
 
-    e.preventDefault();
-    e.stopPropagation();
-
     const signatureElement = e.currentTarget as HTMLElement;
     const rect = signatureElement.getBoundingClientRect();
 
@@ -144,9 +141,8 @@ export default function SignDocumentPage() {
     const newX = e.clientX - containerRect.left - dragOffset.x;
     const newY = e.clientY - containerRect.top - dragOffset.y;
 
-    // Keep signature within bounds
-    const maxX = containerRect.width - 200; // signature width
-    const maxY = containerRect.height - 50; // signature height
+    const maxX = containerRect.width - 200;
+    const maxY = containerRect.height - 50;
 
     setSignaturePosition({
       x: Math.max(0, Math.min(newX, maxX)),
